@@ -133,19 +133,33 @@
       font-weight: bold;
       font-size: 1.2em;
     }
-    .product-card button {
-      background: var(--primary-color);
-      color: var(--white);
+    .card-btns {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .card-btns button {
+      flex: 1;
+      padding: 10px;
       border: none;
-      padding: 12px;
-      width: 100%;
-      font-size: 1em;
       border-radius: 5px;
       cursor: pointer;
-      transition: background 0.3s;
+      font-size: 1em;
+      transition: background var(--transition-duration);
     }
-    .product-card button:hover {
+    .card-btns .add-cart {
+      background: var(--primary-color);
+      color: var(--white);
+    }
+    .card-btns .add-cart:hover {
       background: var(--primary-dark);
+    }
+    .card-btns .buy-now {
+      background: var(--accent-color);
+      color: var(--white);
+    }
+    .card-btns .buy-now:hover {
+      opacity: 0.9;
     }
     /* Carousel Arrow Controls - Adjusted Positioning */
     .carousel {
@@ -186,7 +200,7 @@
     .carousel-control-next-icon {
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23000' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M4.646 1.646a.5.5 0 000 .708L9.293 7l-4.647 4.646a.5.5 0 10.708.708l5-5a.5.5 0 000-.708l-5-5a.5.5 0 00-.708 0z'/%3E%3C/svg%3E");
     }
-    /* Cart Modal */
+    /* Modal Styles */
     .modal {
       display: none;
       position: fixed;
@@ -204,9 +218,9 @@
     }
     .modal-content {
       background: var(--white);
-      margin: 10% auto;
-      padding: 30px;
-      max-width: 600px;
+      margin: 5% auto;
+      padding: 20px;
+      max-width: 900px;
       border-radius: 8px;
       position: relative;
       box-shadow: 0 4px 10px rgba(0,0,0,0.3);
@@ -334,7 +348,6 @@
     <div class="container" data-aos="fade-right">
       <div class="row align-items-center">
         <div class="col-md-6 mb-4 mb-md-0">
-          <!-- Updated image changed to lw.png -->
           <img src="lw.png" class="img-fluid rounded" alt="About Us">
         </div>
         <div class="col-md-6">
@@ -398,6 +411,26 @@
       </div>
     </div>
   </section>
+  <!-- Product Detail Modal -->
+  <div id="product-detail-modal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" id="close-product-detail" aria-label="Close Detail Modal">&times;</span>
+      <div class="row">
+        <div class="col-md-6" id="modal-carousel-container">
+          <!-- Carousel for product images will be injected here -->
+        </div>
+        <div class="col-md-6" id="modal-details-container">
+          <h3 id="modal-product-name"></h3>
+          <p id="modal-product-specs"></p>
+          <p id="modal-product-price" class="price"></p>
+          <div class="card-btns" style="margin-top:20px;">
+            <button id="modal-add-to-cart" class="add-cart">Add to Cart</button>
+            <button id="modal-buy-now" class="buy-now">Buy Now</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
   <!-- Team Section -->
   <section id="team" class="section">
     <div class="container" data-aos="fade-up">
@@ -522,14 +555,16 @@
       document.body.classList.toggle("dark-mode");
       darkModeToggle.innerText = document.body.classList.contains("dark-mode") ? "Light Mode" : "Dark Mode";
     });
-    /* Product Array */
+    /* Product Array with 8 items (including 2 new products) */
     const products = [
       { id: 1, name: "Minimalist Website", specs: "Clean, modern, minimalistic design", price: 2300, images: ["mw.png", "mw2.png"] },
       { id: 2, name: "Creative Website", specs: "Bold, artistic design with engaging visuals", price: 3700, images: ["cw.png", "cw2.png", "cw3.png"] },
       { id: 3, name: "Corporate Website", specs: "Professional, business-focused design", price: 3000, images: ["cow.png", "cow2.png", "cow3.png", "cow4.png", "cow5.png"] },
       { id: 4, name: "E-commerce Website", specs: "Dynamic, interactive, user-friendly design", price: 5000, images: ["ecw.png", "ecw2.png"] },
       { id: 5, name: "Portfolio Website", specs: "Elegant, creative portfolio design", price: 1700, images: ["pw.png", "pw2.png", "pw3.png", "pw4.png"] },
-      { id: 6, name: "Blog Website", specs: "Clean, content-focused design", price: 1000, images: ["bw.png", "bw2.png", "bw3.png"] }
+      { id: 6, name: "Blog Website", specs: "Clean, content-focused design", price: 1000, images: ["bw.png", "bw2.png", "bw3.png"] },
+      { id: 7, name: "Chic Boutique Website", specs: "Elegant, stylish design tailored for high-end boutiques. Perfect for showcasing fashion and accessories.", price: 2800, images: ["js.png", "js2.png", "js3.png", "js4.png", "js5.png", "js6.png"] },
+      { id: 8, name: "Gourmet Express Food Stall Website", specs: "Vibrant, enticing design ideal for food stalls. Features dynamic menu integration and appealing visuals.", price: 2200, images: ["uk.png", "uk2.png", "uk3.png"] }
     ];
     /* Cart logic */
     let cart = JSON.parse(localStorage.getItem("cart")) || [];
@@ -559,7 +594,7 @@
       const count = cart.reduce((sum, item) => sum + item.quantity, 0);
       document.getElementById("cart-count").innerText = count;
     }
-    /* Display products with hover-only carousel with arrows */
+    /* Display products with clickable carousel and updated buttons */
     function displayProducts(filteredProducts = products) {
       const container = document.getElementById("product-container");
       container.innerHTML = "";
@@ -572,25 +607,31 @@
         `).join('');
         const card = document.createElement("div");
         card.className = "product-card";
+        // The carousel is wrapped in a div that triggers the detail modal when clicked.
         card.innerHTML = `
-          <div id="${carouselId}" class="carousel slide">
-            <div class="carousel-inner">
-              ${slides}
+          <div onclick="openProductDetail(${product.id})" style="cursor:pointer;">
+            <div id="${carouselId}" class="carousel slide">
+              <div class="carousel-inner">
+                ${slides}
+              </div>
+              <a class="carousel-control-prev" href="#${carouselId}" role="button" data-bs-slide="prev" onclick="event.stopPropagation();">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Previous</span>
+              </a>
+              <a class="carousel-control-next" href="#${carouselId}" role="button" data-bs-slide="next" onclick="event.stopPropagation();">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Next</span>
+              </a>
             </div>
-            <a class="carousel-control-prev" href="#${carouselId}" role="button" data-bs-slide="prev">
-              <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-              <span class="visually-hidden">Previous</span>
-            </a>
-            <a class="carousel-control-next" href="#${carouselId}" role="button" data-bs-slide="next">
-              <span class="carousel-control-next-icon" aria-hidden="true"></span>
-              <span class="visually-hidden">Next</span>
-            </a>
           </div>
           <div class="card-content">
             <h3>${product.name}</h3>
             <p>${product.specs}</p>
             <p class="price">PKR ${product.price}</p>
-            <button onclick="addToCart(${product.id})">Add to Cart</button>
+            <div class="card-btns">
+              <button class="add-cart" onclick="event.stopPropagation(); addToCart(${product.id})">Add to Cart</button>
+              <button class="buy-now" onclick="event.stopPropagation(); buyNow(${product.id})">Buy Now</button>
+            </div>
           </div>
         `;
         container.appendChild(card);
@@ -604,6 +645,78 @@
         carouselEl.addEventListener("mouseleave", () => bsCarousel.pause());
       });
     }
+    /* Product Detail Modal functions */
+    function openProductDetail(productId) {
+      const product = products.find(p => p.id === productId);
+      if (!product) return;
+      // Build carousel for modal
+      const carouselContainer = document.getElementById("modal-carousel-container");
+      let modalCarouselId = `modal-carousel-${product.id}`;
+      let slides = product.images.map((img, idx) => `
+        <div class="carousel-item ${idx === 0 ? 'active' : ''}">
+          <img src="${img}" class="d-block w-100" alt="${product.name}" style="height:300px; object-fit:cover;">
+        </div>
+      `).join('');
+      carouselContainer.innerHTML = `
+        <div id="${modalCarouselId}" class="carousel slide" data-bs-ride="carousel">
+          <div class="carousel-inner">
+            ${slides}
+          </div>
+          <a class="carousel-control-prev" href="#${modalCarouselId}" role="button" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Previous</span>
+          </a>
+          <a class="carousel-control-next" href="#${modalCarouselId}" role="button" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Next</span>
+          </a>
+        </div>
+      `;
+      // Populate details in modal
+      document.getElementById("modal-product-name").innerText = product.name;
+      document.getElementById("modal-product-specs").innerText = product.specs;
+      document.getElementById("modal-product-price").innerText = "PKR " + product.price;
+      // Set up buttons in modal
+      document.getElementById("modal-add-to-cart").onclick = () => {
+        addToCart(product.id);
+        closeProductDetail();
+      };
+      document.getElementById("modal-buy-now").onclick = () => {
+        buyNow(product.id);
+      };
+      // Show modal
+      document.getElementById("product-detail-modal").style.display = "block";
+    }
+    function closeProductDetail() {
+      document.getElementById("product-detail-modal").style.display = "none";
+    }
+    document.getElementById("close-product-detail").addEventListener("click", closeProductDetail);
+    window.addEventListener("click", (e) => {
+      const modal = document.getElementById("product-detail-modal");
+      if (e.target === modal) modal.style.display = "none";
+    });
+    /* Buy Now function: adds to cart then redirects to order email */
+    function buyNow(productId) {
+      addToCart(productId);
+      // For demonstration, we simulate immediate checkout by redirecting to the mailto link with order details
+      if (cart.length === 0) {
+        showNotification("Your cart is empty!");
+        return;
+      }
+      let orderDetails = "New Order Received:\n\n";
+      cart.forEach((item, i) => {
+        orderDetails += `${i + 1}. ${item.name} - PKR ${item.price} x ${item.quantity} = PKR ${item.price * item.quantity}\n   Specs: ${item.specs}\n\n`;
+      });
+      const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      orderDetails += "Order Total: PKR " + total;
+      const mailtoLink = `mailto:spiderwebdomain.official@gmail.com?subject=New Order Received&body=${encodeURIComponent(orderDetails)}`;
+      // Clear cart after buy now action
+      cart = [];
+      localStorage.removeItem("cart");
+      updateCartCount();
+      window.location.href = mailtoLink;
+    }
+    /* Cart Modal functions */
     function displayCart() {
       const cartContainer = document.getElementById("cart-items");
       cartContainer.innerHTML = "";
